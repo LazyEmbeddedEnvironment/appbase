@@ -1,6 +1,6 @@
 # Defines AppBase library target.
 project( AppBase )
-cmake_minimum_required( VERSION 2.8.12 )
+cmake_minimum_required( VERSION 3.5)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 
@@ -29,7 +29,7 @@ if( APPLE )
 else( APPLE )
   # Linux Specific Options Here
   message( STATUS "Configuring AppBase on Linux" )
-  set( CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++14 -Wall" )
+  set( CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++14 -Wall -pthread" )
   set( rt_library rt )
   set( pthread_library pthread)
   if ( FULL_STATIC_BUILD )
@@ -67,9 +67,9 @@ endif()
 
 set(CPACK_PACKAGING_INSTALL_PREFIX /)
 
-install( TARGETS
-   appbase
+set(DCMAKE_INSTALL_FULL_LIBDIR=lib)
 
+install(TARGETS appbase
    RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
    LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
    ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}

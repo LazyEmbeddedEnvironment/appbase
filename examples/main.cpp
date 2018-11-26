@@ -28,7 +28,7 @@ class chain_plugin : public appbase::plugin<chain_plugin>
                ;
      }
 
-     void plugin_initialize( const variables_map& options ) { std::cout << "initialize chain plugin\n"; }
+     void plugin_initialize( const variables_map& options ) { std::cout << "initialize "<< name() <<"\n" ; }
      void plugin_startup()  { std::cout << "starting chain plugin \n"; }
      void plugin_shutdown() { std::cout << "shutdown chain plugin \n"; }
 
@@ -54,8 +54,7 @@ class net_plugin : public appbase::plugin<net_plugin>
               ("public-endpoint", bpo::value<string>()->default_value( "0.0.0.0:9876" ), "The public IP address and port that should be advertized to peers.")
               ;
      }
-
-     void plugin_initialize( const variables_map& options ) { std::cout << "initialize net plugin\n"; }
+     void plugin_initialize( const variables_map& options ) { std::cout << "initialize "<< name() <<"\n" ; }
      void plugin_startup()  { std::cout << "starting net plugin \n"; }
      void plugin_shutdown() { std::cout << "shutdown net plugin \n"; }
 

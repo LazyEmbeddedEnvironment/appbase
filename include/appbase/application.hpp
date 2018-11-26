@@ -76,7 +76,15 @@ namespace appbase {
             return initialize_impl(argc, argv, {find_plugin<Plugin>()...});
          }
 
-         void                  startup();
+        bool                 initialize_plugins(int argc, char** argv) {
+            vector<abstract_plugin*> registeredPlugins;
+            for (auto& plugin : plugins)
+                registeredPlugins.push_back(plugin.second.get());
+            return initialize_impl(argc, argv, registeredPlugins);
+        }
+
+
+       void                  startup();
          void                  shutdown();
 
          /**

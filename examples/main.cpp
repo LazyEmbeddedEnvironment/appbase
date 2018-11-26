@@ -65,7 +65,7 @@ class net_plugin : public appbase::plugin<net_plugin>
 int main( int argc, char** argv ) {
    try {
       appbase::app().register_plugin<net_plugin>();
-      if( !appbase::app().initialize( argc, argv ) )
+      if( !appbase::app().initialize_plugins( argc, argv ) )
          return -1;
       appbase::app().startup();
       appbase::app().exec();

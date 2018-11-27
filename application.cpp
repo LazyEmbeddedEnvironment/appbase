@@ -257,7 +257,7 @@ bool application::is_quiting() const {
 }
 
 void application::exec() {
-
+   boost::asio::io_service::work work (*io_serv);
    io_serv->run();
 
    shutdown(); /// perform synchronous shutdown

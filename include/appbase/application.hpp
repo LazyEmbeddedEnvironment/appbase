@@ -219,6 +219,7 @@ namespace appbase {
 
          virtual state get_state()const override         { return _state; }
          virtual const std::string& name()const override { return _name; }
+         virtual const int instance()const override      { return _instance; }
 
          virtual void register_dependencies() {
             static_cast<Impl*>(this)->plugin_requires([&](auto& plug){});
@@ -227,6 +228,8 @@ namespace appbase {
          virtual void initialize(const variables_map& options) override {
             if(_state == registered) {
                _state = initialized;
+                _instance = options.count( "instance" ) and
+                            options["instance"].as<int>() > 0 ? options["instance"].as<int>() : 0;
                static_cast<Impl*>(this)->plugin_requires([&](auto& plug){ plug.initialize(options); });
                static_cast<Impl*>(this)->plugin_initialize(options);
                //ilog( "initializing plugin ${name}", ("name",name()) );
@@ -259,5 +262,6 @@ namespace appbase {
       private:
          state _state = abstract_plugin::registered;
          std::string _name;
+         int _instance;
    };
 }

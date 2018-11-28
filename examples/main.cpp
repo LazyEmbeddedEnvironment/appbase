@@ -1,7 +1,7 @@
 #include <appbase/application.hpp>
 #include <iostream>
 #include <boost/exception/diagnostic_information.hpp>
-
+#include "yarp_plugin.h"
 struct database { };
 
 namespace bpo = boost::program_options;
@@ -28,7 +28,7 @@ class chain_plugin : public appbase::plugin<chain_plugin>
                ;
      }
 
-     void plugin_initialize( const variables_map& options ) { std::cout << "initialize "<< name() <<"\n" ; }
+     void plugin_initialize( const variables_map& options ) { std::cout << "initialize "<< name()  << " instance " << instance() <<"\n" ; }
      void plugin_startup()  { std::cout << "starting chain plugin \n"; }
      void plugin_shutdown() { std::cout << "shutdown chain plugin \n"; }
 
@@ -64,7 +64,7 @@ class net_plugin : public appbase::plugin<net_plugin>
 
 int main( int argc, char** argv ) {
    try {
-      appbase::app().register_plugin<net_plugin>();
+      appbase::app().register_plugin<yarp_plugin>();
       if( !appbase::app().initialize_plugins( argc, argv ) )
          return -1;
       appbase::app().startup();

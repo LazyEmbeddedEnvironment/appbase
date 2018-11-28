@@ -37,6 +37,7 @@ namespace appbase {
          virtual ~abstract_plugin(){}
          virtual state get_state()const = 0;
          virtual const std::string& name()const  = 0;
+         virtual const int instance()const  = 0;
          virtual void set_program_options( options_description& cli, options_description& cfg ) = 0;
          virtual void initialize(const variables_map& options) = 0;
          virtual void startup() = 0;

@@ -18,7 +18,6 @@ list(APPEND BOOST_COMPONENTS thread
                              program_options
                              unit_test_framework
                              locale)
-find_package(YARP REQUIRED)
 find_package(Boost 1.60 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 
@@ -48,7 +47,7 @@ add_library( appbase
              ${HEADERS}
            )
 
-target_link_libraries( appbase ${Boost_LIBRARIES} ${YARP_LIBRARIES})
+target_link_libraries( appbase ${Boost_LIBRARIES})
 
 target_include_directories( appbase
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" ${Boost_INCLUDE_DIR})
@@ -70,7 +69,7 @@ set(CPACK_PACKAGING_INSTALL_PREFIX /)
 install(TARGETS appbase
    RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
    LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+   ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR} lib
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/appbase
 )
 install_directory_permissions( DIRECTORY ${CMAKE_INSTALL_FULL_INCLUDEDIR}/appbase )

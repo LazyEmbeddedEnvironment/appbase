@@ -6,6 +6,8 @@
 #include <appbase/application.hpp>
 #include <iostream>
 #include <boost/exception/diagnostic_information.hpp>
+#include <yarp/os/all.h>
+#include <memory>
 
 namespace bpo = boost::program_options;
 
@@ -13,6 +15,19 @@ using bpo::options_description;
 using bpo::variables_map;
 using std::string;
 using std::vector;
+using yarp::os::Network;
+using yarp::os::Port;
+
+class DataProcessor : public yarp::os::PortReader {
+    virtual bool read(yarp::os::ConnectionReader& connection) {
+        yarp::os::Bottle b;
+        b.read(connection);
+        // process data in b
+        std::cout <<std::fixed<<yarp::os::Time::now() << std::endl;
+        printf("Got %s\n", b.toString().c_str());
+        return true;
+    }
+};
 
 class yarp_plugin : public appbase::plugin<yarp_plugin>{
 public:
@@ -31,8 +46,25 @@ public:
                 ;
     }
 
-    void plugin_initialize( const variables_map& options ) { std::cout << "initialize "<< name()  << " instance " << instance() <<"\n" ; }
-    void plugin_startup()  { std::cout << "starting "<< name() <<"\n"; }
-    void plugin_shutdown() { std::cout << "shutdown "<< name() <<"\n"; }
+    void plugin_initialize( const variables_map& options ) {
+        std::cout << "initialize "<< name()  << " instance " << instance() <<"\n" ;
+        yarp = std::shared_ptr<Network>(new Network);
+        processor = std::shared_ptr<DataProcessor>(new DataProcessor);
+        portIn = std::shared_ptr<Port>(new Port);
+        portIn->open("/"+name()+"/"+options.at("port_name").as<string>());
+        portIn->setReader(*this->processor);
+    }
+    void plugin_startup()  {
+        std::cout << "starting "<< name() <<"\n";
+    }
+    void plugin_shutdown() {
+        std::cout << "shutdown "<< name() <<"\n";
+        portIn.reset(); // Attention do not change reset order !!!
+        processor.reset();
+        yarp.reset();
+    }
 private:
+    std::shared_ptr<Network> yarp;
+    std::shared_ptr<DataProcessor> processor;
+    std::shared_ptr<Port> portIn;
 };

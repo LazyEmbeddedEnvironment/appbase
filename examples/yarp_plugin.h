@@ -17,16 +17,18 @@ using std::string;
 using std::vector;
 using yarp::os::Network;
 using yarp::os::Port;
-
 class DataProcessor : public yarp::os::PortReader {
     virtual bool read(yarp::os::ConnectionReader& connection) {
-        yarp::os::Bottle b;
-        b.read(connection);
-        // process data in b
-        std::cout <<std::fixed<<yarp::os::Time::now() << std::endl;
-        printf("Got %s\n", b.toString().c_str());
+        _callback(connection);
         return true;
     }
+public:
+    typedef std::function<void(yarp::os::ConnectionReader&)> readerCallback;
+    virtual void setCallback(readerCallback callback) {
+        this->_callback = callback;
+    };
+private:
+    readerCallback _callback;
 };
 
 class yarp_plugin : public appbase::plugin<yarp_plugin>{
@@ -50,6 +52,13 @@ public:
         std::cout << "initialize "<< name()  << " instance " << instance() <<"\n" ;
         yarp = std::shared_ptr<Network>(new Network);
         processor = std::shared_ptr<DataProcessor>(new DataProcessor);
+        processor->setCallback([](yarp::os::ConnectionReader& conn){
+            yarp::os::Bottle b;
+            b.read(conn);
+            // process data in b
+            std::cout <<std::fixed<<yarp::os::Time::now() << std::endl;
+            printf("Got %s\n", b.toString().c_str());
+        });
         portIn = std::shared_ptr<Port>(new Port);
         portIn->open("/"+name()+"/"+options.at("port_name").as<string>());
         portIn->setReader(*this->processor);

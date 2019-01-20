@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
+#include <unordered_map>
 
 namespace appbase {
 
@@ -16,6 +17,8 @@ namespace bpo = boost::program_options;
 using bpo::options_description;
 using bpo::variables_map;
 using std::cout;
+
+using any_type_compare_map = std::unordered_map<std::type_index, std::function<bool(const boost::any& a, const boost::any& b)>>;
 
 class application_impl {
    public:
@@ -32,11 +35,27 @@ class application_impl {
       uint64_t                _version = 0;
 
       std::atomic_bool        _is_quiting{false};
+
+      any_type_compare_map    _any_compare_map;
 };
 
 application::application()
 :my(new application_impl()){
    io_serv = std::make_shared<boost::asio::io_service>();
+
+   register_config_type<std::string>();
+   register_config_type<bool>();
+   register_config_type<unsigned short>();
+   register_config_type<unsigned>();
+   register_config_type<unsigned long>();
+   register_config_type<unsigned long long>();
+   register_config_type<short>();
+   register_config_type<int>();
+   register_config_type<long>();
+   register_config_type<long long>();
+   register_config_type<double>();
+   register_config_type<std::vector<std::string>>();
+   register_config_type<boost::filesystem::path>();
 }
 
 application::~application() { }
@@ -109,6 +128,9 @@ application& application::instance() {
 }
 application& app() { return application::instance(); }
 
+void application::register_config_type_comparison(std::type_index i, config_comparison_f comp) {
+   my->_any_compare_map.emplace(i, comp);
+}
 
 void application::set_program_options()
 {
@@ -205,8 +227,50 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       write_default_config(my->_config_file_name);
    }
 
-   bpo::store(bpo::parse_config_file<char>(my->_config_file_name.make_preferred().string().c_str(),
-                                           my->_cfg_options, false), options);
+   bpo::parsed_options opts_from_config = bpo::parse_config_file<char>(my->_config_file_name.make_preferred().string().c_str(), my->_cfg_options, false);
+   bpo::store(opts_from_config, options);
+
+   std::vector<string> set_but_default_list;
+
+   for(const boost::shared_ptr<bpo::option_description>& od_ptr : my->_cfg_options.options()) {
+      boost::any default_val, config_val;
+      if(!od_ptr->semantic()->apply_default(default_val))
+         continue;
+
+      if(my->_any_compare_map.find(default_val.type()) == my->_any_compare_map.end()) {
+         std::cerr << "APPBASE: Developer -- the type " << default_val.type().name() << " is not registered with appbase," << std::endl;
+         std::cerr << "         add a register_config_type<>() in your plugin's ctor" << std::endl;
+         return false;
+      }
+
+      for(const bpo::basic_option<char>& opt : opts_from_config.options) {
+         if(opt.string_key != od_ptr->long_name())
+            continue;
+
+         od_ptr->semantic()->parse(config_val, opt.value, true);
+         if(my->_any_compare_map.at(default_val.type())(default_val, config_val))
+            set_but_default_list.push_back(opt.string_key);
+         break;
+      }
+   }
+   if(set_but_default_list.size()) {
+      std::cerr << "APPBASE: Warning: The following configuration items in the config.ini file are redundantly set to" << std::endl;
+      std::cerr << "         their default value:" << std::endl;
+      std::cerr << "             ";
+      size_t chars_on_line = 0;
+      for(auto it = set_but_default_list.cbegin(); it != set_but_default_list.end(); ++it) {
+         std::cerr << *it;
+         if(it + 1 != set_but_default_list.end())
+            std::cerr << ", ";
+         if((chars_on_line += it->size()) > 65) {
+            std::cerr << std::endl << "             ";
+            chars_on_line = 0;
+         }
+      }
+      std::cerr << std::endl;
+      std::cerr << "         Explicit values will override future changes to application defaults. Consider commenting out or" << std::endl;
+      std::cerr << "         removing these items." << std::endl;
+   }
 
    if(options.count("plugin") > 0)
    {
@@ -258,8 +322,13 @@ bool application::is_quiting() const {
 }
 
 void application::exec() {
-   boost::asio::io_service::work work (*io_serv);
-   io_serv->run();
+
+   bool more = true;
+   while( more || io_serv->run_one() ) {
+      while( io_serv->poll_one() ) {}
+      // execute the highest priority item
+      more = pri_queue.execute_highest();
+   }
 
    shutdown(); /// perform synchronous shutdown
 }
@@ -302,12 +371,14 @@ void application::print_default_config(std::ostream& os) {
          auto example = od->format_parameter();
          if(example.empty())
             // This is a boolean switch
-            os << od->long_name() << " = " << "false" << std::endl;
+            os << "# " << od->long_name() << " = " << "false" << std::endl;
+         else if(store.type() == typeid(bool))
+            os << "# " << od->long_name() << " = " << (boost::any_cast<bool&>(store) ? "true" : "false") << std::endl;
          else {
             // The string is formatted "arg (=<interesting part>)"
             example.erase(0, 6);
             example.erase(example.length()-1);
-            os << od->long_name() << " = " << example << std::endl;
+            os << "# " << od->long_name() << " = " << example << std::endl;
          }
       }
       os << std::endl;

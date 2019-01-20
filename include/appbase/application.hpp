@@ -2,6 +2,7 @@
 #include <appbase/plugin.hpp>
 #include <appbase/channel.hpp>
 #include <appbase/method.hpp>
+#include <appbase/execution_priority_queue.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/core/demangle.hpp>
 #include <typeindex>
@@ -9,6 +10,8 @@
 namespace appbase {
    namespace bpo = boost::program_options;
    namespace bfs = boost::filesystem;
+
+   using config_comparison_f = std::function<bool(const boost::any& a, const boost::any& b)>;
 
    class application
    {
@@ -100,6 +103,17 @@ namespace appbase {
           */
          bool                 is_quiting()const;
 
+         /**
+          * Register a configuration type with appbase. most "plain" types are already registered in
+          * application.cpp. Failure to register a type will cause initialization to fail.
+          */
+         template <typename T> void register_config_type() {
+            register_config_type_comparison(typeid(T), [](const auto& a, const auto& b) {
+               return boost::any_cast<const T&>(a) == boost::any_cast<const T&>(b);
+            });
+         }
+         void register_config_type_comparison(std::type_index, config_comparison_f comp);
+
          static application&  instance();
 
          abstract_plugin* find_plugin(const string& name)const;
@@ -166,7 +180,7 @@ namespace appbase {
             if(itr != channels.end()) {
                return *channel_type::get_channel(itr->second);
             } else {
-               channels.emplace(std::make_pair(key, channel_type::make_unique(io_serv)));
+               channels.emplace(std::make_pair(key, channel_type::make_unique()));
                return  *channel_type::get_channel(channels.at(key));
             }
          }
@@ -176,6 +190,31 @@ namespace appbase {
           * @return io_serivice of application
           */
          boost::asio::io_service& get_io_service() { return *io_serv; }
+
+         /**
+          * Post func to run on io_service with given priority.
+          *
+          * @param priority can be appbase::priority::* constants or any int, larger ints run first
+          * @param func function to run on io_service
+          * @return result of boost::asio::post
+          */
+         template <typename Func>
+         auto post( int priority, Func&& func ) {
+            return boost::asio::post(*io_serv, pri_queue.wrap(priority, std::forward<Func>(func)));
+         }
+
+         /**
+          * Provide access to execution priority queue so it can be used to wrap functions for
+          * prioritized execution.
+          *
+          * Example:
+          *   boost::asio::steady_timer timer( app().get_io_service() );
+          *   timer.async_wait( app().get_priority_queue().wrap(priority::low, [](){ do_something(); }) );
+          */
+         auto& get_priority_queue() {
+            return pri_queue;
+         }
+
       protected:
          template<typename Impl>
          friend class plugin;
@@ -200,6 +239,7 @@ namespace appbase {
          map<std::type_index, erased_channel_ptr>  channels;
 
          std::shared_ptr<boost::asio::io_service>  io_serv;
+         execution_priority_queue                  pri_queue;
 
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
@@ -260,4 +300,15 @@ namespace appbase {
          state _state = abstract_plugin::registered;
          std::string _name;
    };
+
+   template<typename Data, typename DispatchPolicy>
+   void channel<Data,DispatchPolicy>::publish(int priority, const Data& data) {
+      if (has_subscribers()) {
+         // this will copy data into the lambda
+         app().post( priority, [this, data]() {
+            _signal(data);
+         });
+      }
+   }
+
 }

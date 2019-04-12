@@ -1,0 +1,16 @@
+get_filename_component(AppBase_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${AppBase_CMAKE_DIR})
+
+# NOTE Had to use find_package because find_dependency does not support COMPONENTS or MODULE until 3.8.0
+
+#find_dependency(Boost 1.69 REQUIRED COMPONENTS regex)
+find_package(Boost 1.69 REQUIRED COMPONENTS regex)
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET AppBase::AppBase)
+    include("${AppBase_CMAKE_DIR}/AppBaseTargets.cmake")
+endif()
+
+set(AppBase_LIBRARIES AppBase::AppBase)

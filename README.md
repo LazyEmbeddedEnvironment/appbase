@@ -11,7 +11,7 @@ plugins are configured, initialized, started, and shutdown in the proper order.
 - Automatically Load Dependent Plugins in Order
 - Plugins can specify commandline arguments and configuration file options
 - Program gracefully exits from SIGINT, SIGTERM, and SIGPIPE
-- Minimal Dependencies (Boost 1.60, c++14)
+- Minimal Dependencies (Boost 1.69, c++17)
 
 ## Defining a Plugin
 
@@ -108,12 +108,12 @@ To trigger a graceful exit call `appbase::app().quit()` or send SIGTERM, SIGINT,
 
 ## Dependencies 
 
-1. c++14 or newer  (clang or g++)
-2. Boost 1.60 or newer compiled with C++14 support
+1. c++17 or newer  (clang or g++)
+2. Boost 1.69 or newer compiled with C++17 support
 
-To compile boost with c++14 use:
+To compile boost with c++17 use:
 
 ```
-./b2 ...  cxxflags="-std=c++0x -stdlib=libc++" linkflags="-stdlib=libc++" ...
+./b2 ...  cxxflags="-std=c++1z -stdlib=libc++" linkflags="-stdlib=libc++" ...
 ```
 

@@ -40,7 +40,6 @@ target_compile_options(appbase PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wall>)
 target_link_libraries(appbase
         PUBLIC
         Boost::boost
-        PRIVATE
         Boost::date_time
         Boost::filesystem
         Boost::system

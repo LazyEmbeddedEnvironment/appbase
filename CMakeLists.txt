@@ -34,7 +34,7 @@ target_include_directories(appbase
         ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
-target_compile_features(appbase PUBLIC cxx_std_17)
+target_compile_features(appbase PUBLIC cxx_std_14)
 target_compile_options(appbase PUBLIC $<$<CXX_COMPILER_ID:GNU>:-Wall>)
 
 target_link_libraries(appbase
